@@ -14,46 +14,7 @@ describe('Downloader', () => {
         jest.clearAllMocks();
     });
 
-    describe('tiktokDownloader', () => {
-        it('should successfully download TikTok video', async () => {
-            const mockUrl = 'https://vt.tiktok.com/ZSB2LtXQF/';
-            const mockHtmlResponse = {
-                data: `
-                    <html>
-                        <body>
-                            <p class="maintext">Test TikTok Video Title</p>
-                            <a class="download_link without_watermark" href="https://example.com/video.mp4">Download Video</a>
-                            <a class="download_link music" href="https://example.com/audio.mp3">Download Audio</a>
-                        </body>
-                    </html>
-                `
-            };
-
-            mockedAxios.post.mockResolvedValueOnce(mockHtmlResponse);
-
-            const result = await downloader.tiktokDownloader(mockUrl);
-
-            expect(result.status).toBe(200);
-            expect(result.result).toBeDefined();
-            expect(result.result?.title).toBe('Test TikTok Video Title');
-            expect(result.result?.video).toBe('https://example.com/video.mp4');
-            expect(result.result?.audio).toBe('https://example.com/audio.mp3');
-        });
-
-        it('should handle invalid TikTok URL', async () => {
-            const invalidUrl = 'https://invalid-url.com';
-            const mockError = new Error('Failed to extract video or title from response.');
-
-            mockedAxios.post.mockRejectedValueOnce(mockError);
-
-            const result = await downloader.tiktokDownloader(invalidUrl);
-
-            expect(result.status).toBe(false);
-            expect(result.msg).toBeDefined();
-        });
-    });
-
-    describe('tiktokDownloaderAdvanced', () => {
+    describe('tiktokDownloaderV1', () => {
         it('should successfully extract advanced TikTok data', async () => {
             const mockUrl = 'https://vt.tiktok.com/ZSB2LtXQF/';
             const mockHtmlResponse = {
@@ -84,7 +45,7 @@ describe('Downloader', () => {
 
             mockedAxios.post.mockResolvedValueOnce(mockHtmlResponse);
 
-            const result = await downloader.tiktokDownloaderAdvanced(mockUrl);
+            const result = await downloader.tiktokDownloaderV1(mockUrl);
 
             expect(result.status).toBe(200);
             expect(result.result).toBeDefined();
@@ -144,7 +105,7 @@ describe('Downloader', () => {
 
             mockedAxios.post.mockResolvedValueOnce(mockHtmlResponse);
 
-            const result = await downloader.tiktokDownloaderAdvanced(mockUrl);
+            const result = await downloader.tiktokDownloaderV1(mockUrl);
 
             expect(result.status).toBe(200);
             expect(result.result).toBeDefined();
@@ -166,7 +127,7 @@ describe('Downloader', () => {
 
             mockedAxios.post.mockRejectedValueOnce(mockError);
 
-            const result = await downloader.tiktokDownloaderAdvanced(invalidUrl);
+            const result = await downloader.tiktokDownloaderV1(invalidUrl);
 
             expect(result.status).toBe(false);
             expect(result.msg).toBeDefined();

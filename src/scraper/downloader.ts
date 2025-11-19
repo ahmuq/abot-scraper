@@ -7,7 +7,6 @@ import {
     InstagramMediaItem,
     SfileDownloadResult,
     TikTokAdvancedResult,
-    TikTokResult,
     YoutubeResultV2
 } from '../../types/index.js';
 import Generator from '../utils/generator.js';
@@ -90,57 +89,7 @@ export default class Downloader {
         }
     }
 
-    async tiktokDownloader(url: string): Promise<ApiResponse<TikTokResult>> {
-        try {
-            const headers = {
-                'sec-ch-ua':
-                    '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"',
-                'user-agent':
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            };
-
-            const data = new URLSearchParams({
-                id: url,
-                locale: 'en',
-                tt: 'WmNzZDk_',
-            });
-
-            const response: AxiosResponse = await axios.post(
-                'https://ssstik.io/abc?url=dl',
-                data,
-                {
-                    headers,
-                }
-            );
-
-            const $ = cheerio.load(response.data);
-            const title = $('p.maintext').text().trim();
-            const audio = $('a.download_link.music').attr('href');
-            const video = $('a.download_link.without_watermark').attr('href');
-
-            if (!title || !video) {
-                throw new Error('Failed to extract video or title from response.');
-            }
-
-            return {
-                creator: global.creator,
-                status: 200,
-                result: {
-                    title: title,
-                    video: video || '',
-                    audio: audio || '',
-                },
-            };
-        } catch (error) {
-            return {
-                creator: global.creator,
-                status: false,
-                msg: error instanceof Error ? error.message : 'Unknown error',
-            };
-        }
-    }
-
-    async tiktokDownloaderAdvanced(url: string): Promise<ApiResponse<TikTokAdvancedResult>> {
+    async tiktokDownloaderV1(url: string): Promise<ApiResponse<TikTokAdvancedResult>> {
         try {
             const headers = {
                 'sec-ch-ua':
