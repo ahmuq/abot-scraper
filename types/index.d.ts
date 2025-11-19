@@ -16,6 +16,19 @@ export interface TikTokResult {
     audio: string;
 }
 
+export interface TikTokAdvancedResult {
+    author: string;
+    caption: string;
+    avatar: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    type: 'video' | 'images';
+    videoDownloadUrl?: string;
+    audioDownloadUrl: string;
+    images?: string[];
+}
+
 export interface InstagramUserInfo {
     username: string;
     [key: string]: unknown;
@@ -139,6 +152,8 @@ export declare class Downloader {
     facebook(url: string): Promise<ApiResponse<FacebookResult>>;
 
     tiktokDownloader(url: string): Promise<ApiResponse<TikTokResult>>;
+
+    tiktokDownloaderAdvanced(url: string): Promise<ApiResponse<TikTokAdvancedResult>>;
 
     igstory(username: string): Promise<ApiResponse<InstagramStoriesResult>>;
 

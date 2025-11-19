@@ -6,6 +6,7 @@ import {
     FacebookResult,
     InstagramMediaItem,
     SfileDownloadResult,
+    TikTokAdvancedResult,
     TikTokResult,
     YoutubeResultV2
 } from '../../types/index.js';
@@ -130,6 +131,122 @@ export default class Downloader {
                     audio: audio || '',
                 },
             };
+        } catch (error) {
+            return {
+                creator: global.creator,
+                status: false,
+                msg: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    }
+
+    async tiktokDownloaderAdvanced(url: string): Promise<ApiResponse<TikTokAdvancedResult>> {
+        try {
+            const headers = {
+                'sec-ch-ua':
+                    '" Not;A Brand";v="99", "Google Chrome";v="91", "Chromium";v="91"',
+                'user-agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            };
+
+            const data = new URLSearchParams({
+                id: url,
+                locale: 'en',
+                tt: 'WmNzZDk_',
+            });
+
+            const response: AxiosResponse = await axios.post(
+                'https://ssstik.io/abc?url=dl',
+                data,
+                {
+                    headers,
+                }
+            );
+
+            const $ = cheerio.load(response.data);
+            const author = $('h2').text().trim();
+            const avatar = $('img.result_author').attr('src') || '';
+            const caption = $('p.maintext').text().trim();
+
+            let likes = 0;
+            let comments = 0;
+            let shares = 0;
+            const likeText = $('div.d-flex:has(svg.feather-thumbs-up)').find('div').eq(1).text().trim();
+            likes = parseInt(likeText.replace(/[K,]/g, (match) => {
+                return match === 'K' ? '000' : '';
+            })) || 0;
+
+            const commentText = $('div.d-flex:has(svg.feather-message-square)').find('div').eq(1).text().trim();
+            comments = parseInt(commentText.replace(/[K,]/g, (match) => {
+                return match === 'K' ? '000' : '';
+            })) || 0;
+
+            const shareText = $('div.d-flex:has(svg.feather-share-2)').find('div').eq(1).text().trim();
+            shares = parseInt(shareText.replace(/[K,]/g, (match) => {
+                return match === 'K' ? '000' : '';
+            })) || 0;
+
+            const audioDownloadUrl = $('a.download_link.music').attr('href') || '';
+
+            const slides = $('li.splide__slide');
+            const isCarousel = slides.length > 0;
+
+            if (isCarousel) {
+                const images: string[] = [];
+
+                slides.each((_index, element) => {
+                    const $slide = $(element);
+                    const downloadLink = $slide.find('a.download_link.slide').attr('href');
+
+                    if (downloadLink) {
+                        images.push(downloadLink);
+                    }
+                });
+
+                if (images.length === 0) {
+                    throw new Error('Failed to extract carousel slides from response.');
+                }
+
+                return {
+                    creator: global.creator,
+                    status: 200,
+                    result: {
+                        author,
+                        caption,
+                        avatar,
+                        likes,
+                        comments,
+                        shares,
+                        type: 'images',
+                        images,
+                        audioDownloadUrl,
+                    },
+                };
+            } else {
+                const videoDownloadUrl = $('a#hd_download').attr('data-directurl') ||
+                    $('a.download_link.without_watermark_hd').attr('href') ||
+                    $('a.download_link.without_watermark').attr('href') || '';
+
+                if (!author || !caption || !videoDownloadUrl) {
+                    throw new Error('Failed to extract required TikTok data from response.');
+                }
+
+                return {
+                    creator: global.creator,
+                    status: 200,
+                    result: {
+                        author,
+                        caption,
+                        avatar,
+                        likes,
+                        comments,
+                        shares,
+                        type: 'video',
+                        videoDownloadUrl,
+                        audioDownloadUrl,
+                    },
+                };
+            }
         } catch (error) {
             return {
                 creator: global.creator,

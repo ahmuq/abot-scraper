@@ -53,6 +53,126 @@ describe('Downloader', () => {
         });
     });
 
+    describe('tiktokDownloaderAdvanced', () => {
+        it('should successfully extract advanced TikTok data', async () => {
+            const mockUrl = 'https://vt.tiktok.com/ZSB2LtXQF/';
+            const mockHtmlResponse = {
+                data: `
+                    <html>
+                        <body>
+                            <h2>Rhu</h2>
+                            <img class="result_author" src="https://example.com/avatar.jpg" alt="Rhu">
+                            <p class="maintext">Saw this on a server — looks really cool. Just sharing it here. #evade #evaderoblox #evadechristmas</p>
+                            <a id="hd_download" data-directurl="https://example.com/video-hd.mp4" href="#">Without watermark HD</a>
+                            <a class="download_link music" href="https://example.com/audio.mp3">Download MP3</a>
+                            <div class="d-flex flex-1 align-items-center justify-content-start">
+                                <svg class="feather feather-thumbs-up"></svg>
+                                <div>5.1K</div>
+                            </div>
+                            <div class="d-flex flex-1 align-items-center justify-content-center">
+                                <svg class="feather feather-message-square"></svg>
+                                <div>55</div>
+                            </div>
+                            <div class="d-flex flex-1 align-items-center justify-content-end">
+                                <svg class="feather feather-share-2"></svg>
+                                <div>733</div>
+                            </div>
+                        </body>
+                    </html>
+                `
+            };
+
+            mockedAxios.post.mockResolvedValueOnce(mockHtmlResponse);
+
+            const result = await downloader.tiktokDownloaderAdvanced(mockUrl);
+
+            expect(result.status).toBe(200);
+            expect(result.result).toBeDefined();
+            expect(result.result?.author).toBe('Rhu');
+            expect(result.result?.caption).toContain('Saw this on a server');
+            expect(result.result?.avatar).toBe('https://example.com/avatar.jpg');
+            expect(result.result?.videoDownloadUrl).toBe('https://example.com/video-hd.mp4');
+            expect(result.result?.audioDownloadUrl).toBe('https://example.com/audio.mp3');
+            expect(result.result?.likes).toBe(5100);
+            expect(result.result?.comments).toBe(55);
+            expect(result.result?.shares).toBe(733);
+            expect(result.result?.type).toBe('video');
+        });
+
+        it('should successfully extract TikTok carousel/slides data', async () => {
+            const mockUrl = 'https://vt.tiktok.com/carousel-example/';
+            const mockHtmlResponse = {
+                data: `
+                    <html>
+                        <body>
+                            <h2>4kqualtz</h2>
+                            <img class="result_author" src="https://example.com/avatar-carousel.jpg" alt="4kqualtz">
+                            <p class="maintext">Amazing carousel &nbsp;</p>
+                            <div class="splide">
+                                <ul class="splide__list">
+                                    <li class="splide__slide">
+                                        <img data-splide-lazy="https://example.com/slide1-preview.jpg" />
+                                        <a class="download_link slide" href="https://example.com/slide1.jpg">Download</a>
+                                    </li>
+                                    <li class="splide__slide">
+                                        <img data-splide-lazy="https://example.com/slide2-preview.jpg" />
+                                        <a class="download_link slide" href="https://example.com/slide2.jpg">Download</a>
+                                    </li>
+                                    <li class="splide__slide">
+                                        <img data-splide-lazy="https://example.com/slide3-preview.jpg" />
+                                        <a class="download_link slide" href="https://example.com/slide3.jpg">Download</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <a class="download_link music" href="https://example.com/audio-carousel.mp3">Download MP3</a>
+                            <div class="d-flex flex-1 align-items-center justify-content-start">
+                                <svg class="feather feather-thumbs-up"></svg>
+                                <div>4.8K</div>
+                            </div>
+                            <div class="d-flex flex-1 align-items-center justify-content-center">
+                                <svg class="feather feather-message-square"></svg>
+                                <div>50</div>
+                            </div>
+                            <div class="d-flex flex-1 align-items-center justify-content-end">
+                                <svg class="feather feather-share-2"></svg>
+                                <div>589</div>
+                            </div>
+                        </body>
+                    </html>
+                `
+            };
+
+            mockedAxios.post.mockResolvedValueOnce(mockHtmlResponse);
+
+            const result = await downloader.tiktokDownloaderAdvanced(mockUrl);
+
+            expect(result.status).toBe(200);
+            expect(result.result).toBeDefined();
+            expect(result.result?.author).toBe('4kqualtz');
+            expect(result.result?.type).toBe('carousel');
+            expect(result.result?.images).toBeDefined();
+            expect(result.result?.images?.length).toBe(3);
+            expect(result.result?.images?.[0]).toBe('https://example.com/slide1.jpg');
+            expect(result.result?.images?.[1]).toBe('https://example.com/slide2.jpg');
+            expect(result.result?.images?.[2]).toBe('https://example.com/slide3.jpg');
+            expect(result.result?.likes).toBe(4800);
+            expect(result.result?.comments).toBe(50);
+            expect(result.result?.shares).toBe(589);
+        });
+
+        it('should handle missing TikTok data', async () => {
+            const invalidUrl = 'https://invalid-url.com';
+            const mockError = new Error('Failed to extract required TikTok data from response.');
+
+            mockedAxios.post.mockRejectedValueOnce(mockError);
+
+            const result = await downloader.tiktokDownloaderAdvanced(invalidUrl);
+
+            expect(result.status).toBe(false);
+            expect(result.msg).toBeDefined();
+        });
+    });
+
     describe('facebookDownloader', () => {
         it('should successfully download Facebook video', async () => {
             const mockUrl = 'https://www.facebook.com/Add.Aja55/videos/1054552850113076';
