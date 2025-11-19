@@ -1,6 +1,6 @@
 {
   "name": "abot-scraper",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "scraper random for downloader and searching",
   "type": "module",
   "main": "./dist/index.js",
