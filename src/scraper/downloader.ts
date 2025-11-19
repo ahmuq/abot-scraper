@@ -6,7 +6,7 @@ import {
     FacebookResult,
     InstagramMediaItem,
     SfileDownloadResult,
-    TikTokResult,
+    TikTokAdvancedResult,
     YoutubeResultV2
 } from '../../types/index.js';
 import Generator from '../utils/generator.js';
@@ -89,7 +89,7 @@ export default class Downloader {
         }
     }
 
-    async tiktokDownloader(url: string): Promise<ApiResponse<TikTokResult>> {
+    async tiktokDownloaderV1(url: string): Promise<ApiResponse<TikTokAdvancedResult>> {
         try {
             const headers = {
                 'sec-ch-ua':
@@ -113,23 +113,89 @@ export default class Downloader {
             );
 
             const $ = cheerio.load(response.data);
-            const title = $('p.maintext').text().trim();
-            const audio = $('a.download_link.music').attr('href');
-            const video = $('a.download_link.without_watermark').attr('href');
+            const author = $('h2').text().trim();
+            const avatar = $('img.result_author').attr('src') || '';
+            const caption = $('p.maintext').text().trim();
 
-            if (!title || !video) {
-                throw new Error('Failed to extract video or title from response.');
+            let likes = 0;
+            let comments = 0;
+            let shares = 0;
+            const likeText = $('div.d-flex:has(svg.feather-thumbs-up)').find('div').eq(1).text().trim();
+            likes = parseInt(likeText.replace(/[K,]/g, (match) => {
+                return match === 'K' ? '000' : '';
+            })) || 0;
+
+            const commentText = $('div.d-flex:has(svg.feather-message-square)').find('div').eq(1).text().trim();
+            comments = parseInt(commentText.replace(/[K,]/g, (match) => {
+                return match === 'K' ? '000' : '';
+            })) || 0;
+
+            const shareText = $('div.d-flex:has(svg.feather-share-2)').find('div').eq(1).text().trim();
+            shares = parseInt(shareText.replace(/[K,]/g, (match) => {
+                return match === 'K' ? '000' : '';
+            })) || 0;
+
+            const audioDownloadUrl = $('a.download_link.music').attr('href') || '';
+
+            const slides = $('li.splide__slide');
+            const isCarousel = slides.length > 0;
+
+            if (isCarousel) {
+                const images: string[] = [];
+
+                slides.each((_index, element) => {
+                    const $slide = $(element);
+                    const downloadLink = $slide.find('a.download_link.slide').attr('href');
+
+                    if (downloadLink) {
+                        images.push(downloadLink);
+                    }
+                });
+
+                if (images.length === 0) {
+                    throw new Error('Failed to extract carousel slides from response.');
+                }
+
+                return {
+                    creator: global.creator,
+                    status: 200,
+                    result: {
+                        author,
+                        caption,
+                        avatar,
+                        likes,
+                        comments,
+                        shares,
+                        type: 'images',
+                        images,
+                        audioDownloadUrl,
+                    },
+                };
+            } else {
+                const videoDownloadUrl = $('a#hd_download').attr('data-directurl') ||
+                    $('a.download_link.without_watermark_hd').attr('href') ||
+                    $('a.download_link.without_watermark').attr('href') || '';
+
+                if (!author || !caption || !videoDownloadUrl) {
+                    throw new Error('Failed to extract required TikTok data from response.');
+                }
+
+                return {
+                    creator: global.creator,
+                    status: 200,
+                    result: {
+                        author,
+                        caption,
+                        avatar,
+                        likes,
+                        comments,
+                        shares,
+                        type: 'video',
+                        videoDownloadUrl,
+                        audioDownloadUrl,
+                    },
+                };
             }
-
-            return {
-                creator: global.creator,
-                status: 200,
-                result: {
-                    title: title,
-                    video: video || '',
-                    audio: audio || '',
-                },
-            };
         } catch (error) {
             return {
                 creator: global.creator,
