@@ -172,9 +172,9 @@ export default class Downloader {
                     },
                 };
             } else {
-                const videoDownloadUrl = $('a#hd_download').attr('data-directurl') ||
-                    $('a.download_link.without_watermark_hd').attr('href') ||
-                    $('a.download_link.without_watermark').attr('href') || '';
+                const videoDownloadUrl = $('a.download_link.without_watermark').attr('href') ||
+                    $('a#hd_download').attr('data-directurl') ||
+                    $('a.download_link.without_watermark_hd').attr('data-directurl') || '';
 
                 if (!author || !caption || !videoDownloadUrl) {
                     throw new Error('Failed to extract required TikTok data from response.');
