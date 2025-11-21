@@ -31,10 +31,9 @@ export interface TikTokAdvancedResult {
 
 export interface TikTokV2MediaItem {
     type: 'Video' | 'Image' | 'Music';
-    mediaUrl: string;
-    mediaThumbnail?: string;
-    mediaQuality?: string;
-    mediaFileSize?: string;
+    fileUrl: string;
+    quality?: string;
+    fileSize?: string;
 }
 
 export interface TikTokV2UserInfo {

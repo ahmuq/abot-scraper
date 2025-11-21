@@ -7,6 +7,7 @@ import {
     InstagramMediaItem,
     SfileDownloadResult,
     TikTokAdvancedResult,
+    TikTokV2MediaItem,
     TikTokV2Result,
     YoutubeResultV2
 } from '../../types/index.js';
@@ -269,13 +270,53 @@ export default class Downloader {
             }
 
             const userInfo = apiData.userInfo || {};
-            const mediaItems = (apiData.mediaItems || []).map((item: Record<string, unknown>) => ({
-                type: (item.type as string) || 'Video',
-                mediaUrl: (item.mediaUrl as string) || '',
-                mediaThumbnail: (item.mediaThumbnail as string) || undefined,
-                mediaQuality: (item.mediaQuality as string) || undefined,
-                mediaFileSize: (item.mediaFileSize as string) || undefined,
-            }));
+            const rawMediaItems = (apiData.mediaItems || []) as Array<Record<string, unknown>>;
+
+            const mediaItems: TikTokV2MediaItem[] = await Promise.all(
+                rawMediaItems.map(async (item: Record<string, unknown>): Promise<TikTokV2MediaItem> => {
+                    const type = (item.type as 'Video' | 'Image' | 'Music') || 'Video';
+                    const mediaUrl = (item.mediaUrl as string) || '';
+                    const quality = (item.mediaQuality as string | undefined) || undefined;
+                    const fileSize = (item.mediaFileSize as string | undefined) || undefined;
+
+                    if (type === 'Image') {
+                        const result: TikTokV2MediaItem = {
+                            type,
+                            fileUrl: mediaUrl,
+                        };
+                        if (quality !== undefined) result.quality = quality;
+                        if (fileSize !== undefined) result.fileSize = fileSize;
+                        return result;
+                    }
+
+                    try {
+                        if (type === 'Video' || type === 'Music') {
+                            const fileResponse = await axios.get(mediaUrl, { headers });
+                            const fileData = fileResponse.data;
+
+                            const result: TikTokV2MediaItem = {
+                                type,
+                                fileUrl: (fileData.fileUrl as string) || mediaUrl,
+                            };
+                            const resolvedQuality = quality || (fileData.quality as string | undefined);
+                            const resolvedFileSize = fileSize || (fileData.fileSize as string | undefined);
+                            if (resolvedQuality !== undefined) result.quality = resolvedQuality;
+                            if (resolvedFileSize !== undefined) result.fileSize = resolvedFileSize;
+                            return result;
+                        }
+                    } catch {
+                        // none
+                    }
+
+                    const result: TikTokV2MediaItem = {
+                        type,
+                        fileUrl: mediaUrl,
+                    };
+                    if (quality !== undefined) result.quality = quality;
+                    if (fileSize !== undefined) result.fileSize = fileSize;
+                    return result;
+                })
+            );
 
             return {
                 creator: global.creator,
