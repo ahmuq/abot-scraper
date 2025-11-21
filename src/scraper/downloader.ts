@@ -205,6 +205,62 @@ export default class Downloader {
         }
     }
 
+    async tiktokDownloaderV2(url: string): Promise<ApiResponse<TikTokAdvancedResult>> {
+        try {
+            const headers = {
+                accept: '*/*',
+                'accept-language': 'en-US,en;q=0.9,ar;q=0.8,id;q=0.7,vi;q=0.6',
+                'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                priority: 'u=1, i',
+                'sec-ch-ua':
+                    '"Chromium";v="142", "Microsoft Edge";v="142", "Not_A Brand";v="99"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'x-requested-with': 'XMLHttpRequest',
+            }
+
+            const data = new URLSearchParams({
+                url: url,
+            });
+
+            const response: AxiosResponse = await axios.post(
+                'https://tikdown.com/proxy.php',
+                data,
+                { headers }
+            );
+
+            if (response.data.api.status !== 'Ok') {
+                throw new Error('Failed to retrieve TikTok data from the response.');
+            }
+
+            return {
+                creator: global.creator,
+                status: 200,
+                result: {
+                    author: response.data.api.userInfo.name || '',
+                    caption: response.data.api.description || '',
+                    avatar: response.data.api.userInfo.userAvatar || '',
+                    likes: response.data.api.mediaStats.likesCount || 0,
+                    comments: response.data.api.mediaStats.commentsCount || 0,
+                    shares: response.data.api.mediaStats.sharesCount || 0,
+                    type: 'images',
+                    videoDownloadUrl: '',
+                    audioDownloadUrl: ''
+                }
+            }
+
+        } catch (error) {
+            return {
+                creator: global.creator,
+                status: false,
+                msg: error instanceof Error ? error.message : 'Unknown error',
+            }
+        }
+    }
+
     async instagramDownloader(url: string): Promise<ApiResponse<InstagramMediaItem[]>> {
         try {
             const payload = new URLSearchParams({ url });
