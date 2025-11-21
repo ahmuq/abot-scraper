@@ -7,6 +7,7 @@ import {
     InstagramMediaItem,
     SfileDownloadResult,
     TikTokAdvancedResult,
+    TikTokV2Result,
     YoutubeResultV2
 } from '../../types/index.js';
 import Generator from '../utils/generator.js';
@@ -205,8 +206,9 @@ export default class Downloader {
         }
     }
 
-    async tiktokDownloaderV2(url: string): Promise<ApiResponse<TikTokAdvancedResult>> {
+    async tiktokDownloaderV2(url: string): Promise<ApiResponse<TikTokV2Result>> {
         try {
+
             const headers = {
                 accept: '*/*',
                 'accept-language': 'en-US,en;q=0.9,ar;q=0.8,id;q=0.7,vi;q=0.6',
@@ -220,11 +222,9 @@ export default class Downloader {
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-origin',
                 'x-requested-with': 'XMLHttpRequest',
-            }
+            };
 
-            const data = new URLSearchParams({
-                url: url,
-            });
+            const data = new URLSearchParams({ url });
 
             const response: AxiosResponse = await axios.post(
                 'https://tikdown.com/proxy.php',
@@ -232,32 +232,73 @@ export default class Downloader {
                 { headers }
             );
 
-            if (response.data.api.status !== 'Ok') {
+            const apiData = response.data.api;
+
+            if (!apiData || apiData.status !== 'OK') {
                 throw new Error('Failed to retrieve TikTok data from the response.');
             }
+
+            const mediaStats = apiData.mediaStats || {};
+            let likes = 0;
+            let comments = 0;
+            let shares = 0;
+            let views = 0;
+
+            if (typeof mediaStats.likesCount === 'string') {
+                likes = parseInt(mediaStats.likesCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                likes = mediaStats.likesCount || 0;
+            }
+
+            if (typeof mediaStats.commentsCount === 'string') {
+                comments = parseInt(mediaStats.commentsCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                comments = mediaStats.commentsCount || 0;
+            }
+
+            if (typeof mediaStats.sharesCount === 'string') {
+                shares = parseInt(mediaStats.sharesCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                shares = mediaStats.sharesCount || 0;
+            }
+
+            if (typeof mediaStats.viewsCount === 'string') {
+                views = parseInt(mediaStats.viewsCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                views = mediaStats.viewsCount || 0;
+            }
+
+            const userInfo = apiData.userInfo || {};
+            const mediaItems = (apiData.mediaItems || []).map((item: Record<string, unknown>) => ({
+                type: (item.type as string) || 'Video',
+                mediaUrl: (item.mediaUrl as string) || '',
+                mediaThumbnail: (item.mediaThumbnail as string) || undefined,
+                mediaQuality: (item.mediaQuality as string) || undefined,
+                mediaFileSize: (item.mediaFileSize as string) || undefined,
+            }));
 
             return {
                 creator: global.creator,
                 status: 200,
                 result: {
-                    author: response.data.api.userInfo.name || '',
-                    caption: response.data.api.description || '',
-                    avatar: response.data.api.userInfo.userAvatar || '',
-                    likes: response.data.api.mediaStats.likesCount || 0,
-                    comments: response.data.api.mediaStats.commentsCount || 0,
-                    shares: response.data.api.mediaStats.sharesCount || 0,
-                    type: 'images',
-                    videoDownloadUrl: '',
-                    audioDownloadUrl: ''
-                }
-            }
-
+                    author: userInfo.name || apiData.title || '',
+                    username: userInfo.username || '',
+                    caption: apiData.description || '',
+                    avatar: userInfo.userAvatar || '',
+                    likes,
+                    comments,
+                    shares,
+                    views,
+                    previewUrl: apiData.previewUrl || apiData.imagePreviewUrl || '',
+                    mediaItems,
+                },
+            };
         } catch (error) {
             return {
                 creator: global.creator,
                 status: false,
                 msg: error instanceof Error ? error.message : 'Unknown error',
-            }
+            };
         }
     }
 
