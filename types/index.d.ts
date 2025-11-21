@@ -29,6 +29,34 @@ export interface TikTokAdvancedResult {
     images?: string[];
 }
 
+export interface TikTokV2MediaItem {
+    type: 'Video' | 'Image' | 'Music';
+    fileUrl: string;
+    quality?: string;
+    fileSize?: string;
+}
+
+export interface TikTokV2UserInfo {
+    name: string;
+    username: string;
+    userAvatar: string;
+    userBio?: string;
+    isVerified?: boolean;
+}
+
+export interface TikTokV2Result {
+    author: string;
+    username: string;
+    caption: string;
+    avatar: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+    previewUrl: string;
+    mediaItems: TikTokV2MediaItem[];
+}
+
 export interface InstagramUserInfo {
     username: string;
     [key: string]: unknown;

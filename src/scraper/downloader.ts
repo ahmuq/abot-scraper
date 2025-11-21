@@ -7,6 +7,8 @@ import {
     InstagramMediaItem,
     SfileDownloadResult,
     TikTokAdvancedResult,
+    TikTokV2MediaItem,
+    TikTokV2Result,
     YoutubeResultV2
 } from '../../types/index.js';
 import Generator from '../utils/generator.js';
@@ -196,6 +198,142 @@ export default class Downloader {
                     },
                 };
             }
+        } catch (error) {
+            return {
+                creator: global.creator,
+                status: false,
+                msg: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    }
+
+    async tiktokDownloaderV2(url: string): Promise<ApiResponse<TikTokV2Result>> {
+        try {
+
+            const headers = {
+                accept: '*/*',
+                'accept-language': 'en-US,en;q=0.9,ar;q=0.8,id;q=0.7,vi;q=0.6',
+                'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                priority: 'u=1, i',
+                'sec-ch-ua':
+                    '"Chromium";v="142", "Microsoft Edge";v="142", "Not_A Brand";v="99"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'x-requested-with': 'XMLHttpRequest',
+            };
+
+            const data = new URLSearchParams({ url });
+
+            const response: AxiosResponse = await axios.post(
+                'https://tikdown.com/proxy.php',
+                data,
+                { headers }
+            );
+
+            const apiData = response.data.api;
+
+            if (!apiData || apiData.status !== 'OK') {
+                throw new Error('Failed to retrieve TikTok data from the response.');
+            }
+
+            const mediaStats = apiData.mediaStats || {};
+            let likes = 0;
+            let comments = 0;
+            let shares = 0;
+            let views = 0;
+
+            if (typeof mediaStats.likesCount === 'string') {
+                likes = parseInt(mediaStats.likesCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                likes = mediaStats.likesCount || 0;
+            }
+
+            if (typeof mediaStats.commentsCount === 'string') {
+                comments = parseInt(mediaStats.commentsCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                comments = mediaStats.commentsCount || 0;
+            }
+
+            if (typeof mediaStats.sharesCount === 'string') {
+                shares = parseInt(mediaStats.sharesCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                shares = mediaStats.sharesCount || 0;
+            }
+
+            if (typeof mediaStats.viewsCount === 'string') {
+                views = parseInt(mediaStats.viewsCount.replace(/[K,M]/g, '')) || 0;
+            } else {
+                views = mediaStats.viewsCount || 0;
+            }
+
+            const userInfo = apiData.userInfo || {};
+            const rawMediaItems = (apiData.mediaItems || []) as Array<Record<string, unknown>>;
+
+            const mediaItems: TikTokV2MediaItem[] = await Promise.all(
+                rawMediaItems.map(async (item: Record<string, unknown>): Promise<TikTokV2MediaItem> => {
+                    const type = (item.type as 'Video' | 'Image' | 'Music') || 'Video';
+                    const mediaUrl = (item.mediaUrl as string) || '';
+                    const quality = (item.mediaQuality as string | undefined) || undefined;
+                    const fileSize = (item.mediaFileSize as string | undefined) || undefined;
+
+                    if (type === 'Image') {
+                        const result: TikTokV2MediaItem = {
+                            type,
+                            fileUrl: mediaUrl,
+                        };
+                        if (quality !== undefined) result.quality = quality;
+                        if (fileSize !== undefined) result.fileSize = fileSize;
+                        return result;
+                    }
+
+                    try {
+                        if (type === 'Video' || type === 'Music') {
+                            const fileResponse = await axios.get(mediaUrl, { headers });
+                            const fileData = fileResponse.data;
+
+                            const result: TikTokV2MediaItem = {
+                                type,
+                                fileUrl: (fileData.fileUrl as string) || mediaUrl,
+                            };
+                            const resolvedQuality = quality || (fileData.quality as string | undefined);
+                            const resolvedFileSize = fileSize || (fileData.fileSize as string | undefined);
+                            if (resolvedQuality !== undefined) result.quality = resolvedQuality;
+                            if (resolvedFileSize !== undefined) result.fileSize = resolvedFileSize;
+                            return result;
+                        }
+                    } catch {
+                        // none
+                    }
+
+                    const result: TikTokV2MediaItem = {
+                        type,
+                        fileUrl: mediaUrl,
+                    };
+                    if (quality !== undefined) result.quality = quality;
+                    if (fileSize !== undefined) result.fileSize = fileSize;
+                    return result;
+                })
+            );
+
+            return {
+                creator: global.creator,
+                status: 200,
+                result: {
+                    author: userInfo.name || apiData.title || '',
+                    username: userInfo.username || '',
+                    caption: apiData.description || '',
+                    avatar: userInfo.userAvatar || '',
+                    likes,
+                    comments,
+                    shares,
+                    views,
+                    previewUrl: apiData.previewUrl || apiData.imagePreviewUrl || '',
+                    mediaItems,
+                },
+            };
         } catch (error) {
             return {
                 creator: global.creator,
