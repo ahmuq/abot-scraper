@@ -215,6 +215,7 @@ export default class Downloader {
                 'accept-language': 'en-US,en;q=0.9,ar;q=0.8,id;q=0.7,vi;q=0.6',
                 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 priority: 'u=1, i',
+                referer: 'https://tikdown.com/en',
                 'sec-ch-ua':
                     '"Chromium";v="142", "Microsoft Edge";v="142", "Not_A Brand";v="99"',
                 'sec-ch-ua-mobile': '?0',
@@ -230,7 +231,10 @@ export default class Downloader {
             const response: AxiosResponse = await axios.post(
                 'https://tikdown.com/proxy.php',
                 data,
-                { headers }
+                {
+                    headers,
+                    withCredentials: true
+                }
             );
 
             const apiData = response.data.api;
